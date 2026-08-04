@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build output
+dist/
+frontend/dist/
+
+# Playwright
+playwright-report/
+frontend/playwright-report/
+test-results/
+frontend/test-results/
+
+# Runtime data (PocketBase databases, files, logs)
+pb_data/
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+
+# Misc
+*.tsbuildinfo
+coverage/

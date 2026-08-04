@@ -1,0 +1,28 @@
+services:
+  backend:
+    image: ghcr.io/pawlikmateusz/kanban-backend:latest
+    build:
+      context: ./backend
+    container_name: kanban-backend
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./pb_data:/pb_data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  frontend:
+    image: ghcr.io/pawlikmateusz/kanban-frontend:latest
+    build:
+      context: ./frontend
+    container_name: kanban-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
