@@ -40,6 +40,8 @@ export type Task = {
   order: number
   labels: string[]
   attachments: string[]
+  queued?: boolean
+  queueOrder?: number | null
   created: string
   updated: string
   expand?: {
