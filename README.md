@@ -57,4 +57,6 @@ services:
 docker compose up -d
 ```
 
-Open http://localhost:5173. Data is stored in `./pb_data`. The PocketBase admin console is available on http://localhost:8090/_/.
+Open http://localhost:5173. Data is stored in `./pb_data`.
+
+Reverse-proxy only the **frontend** (port 5173) — it already proxies `/api/` to the backend internally. Keep the backend port (8090) private.
