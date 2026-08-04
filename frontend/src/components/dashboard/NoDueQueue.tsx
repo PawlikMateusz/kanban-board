@@ -22,6 +22,7 @@ import {
   useTasks,
 } from "@/api/kanban"
 import { TaskCard } from "@/components/task/TaskCard"
+import { useUI } from "@/components/ui-provider"
 import { cn } from "@/lib/utils"
 import { utcDayMs } from "@/lib/dates"
 import type { Task } from "@/types"
@@ -73,6 +74,7 @@ function QueueRow({
 export default function NoDueQueue({ onOpen }: { onOpen: (id: string) => void }) {
   const qc = useQueryClient()
   const { data: tasks = [] } = useTasks()
+  const { hoveredDay } = useUI()
   const removeFromQueue = useRemoveFromQueue()
   const reorderQueue = useReorderQueue()
   const [active, setActive] = useState<Task | null>(null)
@@ -113,9 +115,17 @@ export default function NoDueQueue({ onOpen }: { onOpen: (id: string) => void })
   }
 
   return (
-    <section data-testid="section-queue" className="py-5 last:pb-0">
+    <section
+      data-testid="section-queue"
+      className={cn(
+        "py-5 transition-opacity last:pb-0",
+        // A queued card is never due on the hovered day, so fade the whole
+        // section like the other non-matching timeline rows.
+        hoveredDay !== null && "opacity-40"
+      )}
+    >
       <span data-testid="section-header-queue" className="mb-2 flex w-full items-center gap-2">
-        <h2 className="text-sm font-semibold">No-due queue</h2>
+        <h2 className="text-sm font-semibold">Todo next</h2>
         <span
           data-testid="section-count-queue"
           className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"

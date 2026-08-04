@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
+import CalendarSync from "@/components/task/CalendarSync"
 import CommentList from "@/components/task/CommentList"
 import AttachmentList from "@/components/task/AttachmentList"
 import { LabelBadge } from "@/components/task/LabelBadge"
@@ -231,6 +232,8 @@ export default function TaskDrawer() {
                   }}
                 />
               </div>
+
+              <CalendarSync task={task} />
 
               <div>
                 <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">

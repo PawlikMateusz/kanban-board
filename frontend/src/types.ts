@@ -42,6 +42,10 @@ export type Task = {
   attachments: string[]
   queued?: boolean
   queueOrder?: number | null
+  /** Radicale resource URL; set when the task has been synced to the calendar. */
+  caldavUrl?: string
+  /** Raw due-date value at the time of the last calendar sync. */
+  caldavDueDate?: string
   created: string
   updated: string
   expand?: {

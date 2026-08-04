@@ -9,6 +9,11 @@ services:
       - "8090:8080"
     volumes:
       - ./pb_data:/pb_data
+    environment:
+      # Optional CalDAV (Radicale) sync for iOS Reminders. Omit to disable.
+      - RADICALE_URL=${RADICALE_URL:-}
+      - RADICALE_USER=${RADICALE_USER:-}
+      - RADICALE_PASSWORD=${RADICALE_PASSWORD:-}
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/health"]
       interval: 5s

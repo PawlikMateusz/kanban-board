@@ -939,6 +939,67 @@ export function useDeleteChecklistItem() {
   })
 }
 
+// ---------------------------------------------------------------------------
+// CalDAV (optional Radicale sync for iOS Reminders)
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether the backend is configured to sync with Radicale. The UI hides the
+ * calendar controls entirely when this is false (env vars not set).
+ */
+export function useCalDavConfig() {
+  return useQuery({
+    queryKey: ["caldavConfig"],
+    queryFn: async () => {
+      try {
+        const res = await pb.send<{ enabled: boolean }>("/api/caldav/config", {})
+        return res?.enabled ?? false
+      } catch {
+        return false
+      }
+    },
+    staleTime: 5 * 60_000,
+  })
+}
+
+export type SendToCalendarInput = {
+  taskId: string
+}
+
+export function useSendToCalendar() {
+  const qc = useQueryClient()
+  const { toast } = useToast()
+  return useMutation({
+    mutationFn: ({ taskId }: SendToCalendarInput) =>
+      pb.send<{ success: boolean; resource: string }>("/api/caldav/sync", {
+        method: "POST",
+        body: { taskId },
+      }),
+    onSuccess: (_res) => {
+      toast("Synced to calendar", "success")
+      qc.invalidateQueries({ queryKey: queryKeys.tasks })
+    },
+    onError: (e) => toast(friendlyError(e)),
+  })
+}
+
+export function useRemoveFromCalendar() {
+  const qc = useQueryClient()
+  const { toast } = useToast()
+  return useMutation({
+    mutationFn: (taskId: string) =>
+      pb.send<{ success: boolean }>("/api/caldav/remove", {
+        method: "POST",
+        body: { taskId },
+      }),
+    onSuccess: () => {
+      toast("Removed from calendar", "success")
+      qc.invalidateQueries({ queryKey: queryKeys.tasks })
+    },
+    onError: (e) => toast(friendlyError(e)),
+  })
+}
+
 /**
  * Persists a new checklist ordering. `ordered` is the full list in display
  * order with its new `order` values.
