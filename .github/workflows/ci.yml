@@ -88,31 +88,41 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             SHORT_SHA="${{ github.event.pull_request.head.sha }}"
             SHORT_SHA="${SHORT_SHA:0:7}"
-            echo "tags=pr-${{ github.event.pull_request.number }}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+            SUFFIX="pr-${{ github.event.pull_request.number }}-${SHORT_SHA}"
             echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
           elif [ -n "${{ steps.semantic.outputs.new_release_version }}" ]; then
-            echo "tags=latest,${{ steps.semantic.outputs.new_release_version }}" >> "$GITHUB_OUTPUT"
+            SUFFIX="latest,${{ steps.semantic.outputs.new_release_version }}"
             echo "short_sha=" >> "$GITHUB_OUTPUT"
           else
-            echo "tags=latest,${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            SUFFIX="latest,${{ github.sha }}"
             echo "short_sha=" >> "$GITHUB_OUTPUT"
           fi
+
+          BACKEND_TAGS=""
+          FRONTEND_TAGS=""
+          IFS=',' read -ra SUFFIXES <<< "$SUFFIX"
+          for s in "${SUFFIXES[@]}"; do
+            BACKEND_TAGS+="${{ env.BACKEND_IMAGE }}:${s},"
+            FRONTEND_TAGS+="${{ env.FRONTEND_IMAGE }}:${s},"
+          done
+          echo "backend_tags=${BACKEND_TAGS%,}" >> "$GITHUB_OUTPUT"
+          echo "frontend_tags=${FRONTEND_TAGS%,}" >> "$GITHUB_OUTPUT"
       - name: Build & push backend
-        if: steps.meta.outputs.tags != ''
+        if: steps.meta.outputs.backend_tags != ''
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: true
-          tags: ${{ env.BACKEND_IMAGE }}:${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.backend_tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build & push frontend
-        if: steps.meta.outputs.tags != ''
+        if: steps.meta.outputs.frontend_tags != ''
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
           push: true
-          tags: ${{ env.FRONTEND_IMAGE }}:${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.frontend_tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Comment on PR with testable images
