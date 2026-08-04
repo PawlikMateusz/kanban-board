@@ -1,55 +1,60 @@
 # kanban-board
 
-A simple kanban board for personal usage, built with a React/Vite frontend and a
-[PocketBase](https://pocketbase.io/) backend.
+<p align="center">
+  <img src="screenshots/kanban-view.png" width="24%" alt="Kanban view" />
+  <img src="screenshots/dashboard-timeline.png" width="24%" alt="Dashboard timeline" />
+  <img src="screenshots/card-edit-view.png" width="24%" alt="Card edit view" />
+  <img src="screenshots/adding-new-card.png" width="24%" alt="Adding a new card" />
+</p>
+
+I tried a lot of self-hosted kanban boards but never quite liked any of them, so I built my own. This project was created entirely by AI.
 
 ## Stack
 
 - **Frontend** — React 19, Vite, TypeScript, Tailwind CSS
-- **Backend** — PocketBase (SQLite), ships its schema migrations in `backend/pb_migrations`
-- **Tests** — Playwright e2e (frontend) run against an isolated test backend
+- **Backend** — PocketBase (SQLite) with auto-applied migrations
+- **Infra** — Docker Compose, images published to GitHub Container Registry
+- **Tests** — Playwright e2e run in CI on every commit
 
-## Development
+## Features
 
-Requires [just](https://github.com/casey/just) and Docker.
+- Drag-and-drop kanban board with columns and projects
+- Cards with checklists, labels, comments and attachments
+- Dashboard with a timeline and mini calendar
+- Quick-create, global search and keyboard shortcuts
+- Responsive mobile UI
 
-```sh
-just setup      # install frontend dependencies
-just dev        # run frontend + backend locally (docker compose)
-just test       # lint + type-check + build the frontend
-just test-e2e   # run Playwright e2e tests
-just build-images  # build Docker images
+## Run with Docker Compose
+
+```yaml
+services:
+  backend:
+    image: ghcr.io/pawlikmateusz/kanban-backend:latest
+    container_name: kanban-backend
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./pb_data:/pb_data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  frontend:
+    image: ghcr.io/pawlikmateusz/kanban-frontend:latest
+    container_name: kanban-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
 ```
 
-Run `just --list` to see all available recipes.
-
-## Deploy with Docker Compose
-
-The CI pipeline builds and pushes container images to GHCR
-(`ghcr.io/pawlikmateusz/kanban-{backend,frontend}`).
-
 ```sh
-git clone git@github.com:PawlikMateusz/kanban-board.git
-cd kanban-board
-docker compose pull    # pull images from GHCR
-docker compose up -d   # start backend (:8090) and frontend (:5173)
+docker compose up -d
 ```
 
-> Make sure the GHCR packages are set to **public** (GitHub → package settings),
-> or authenticate with `docker login ghcr.io -u <user> -p <PAT>` first.
-
-Alternatively, build everything locally instead of pulling:
-
-```sh
-docker compose up -d --build
-```
-
-Data is persisted in `./pb_data` (SQLite database + file storage). To reset,
-stop the stack and remove the directory or run `just clean`.
-
-## Pull requests
-
-Every commit pushed to a PR runs the full test suite automatically. A testable
-container image is also built and published per PR as
-`ghcr.io/pawlikmateusz/kanban-{backend,frontend}:pr-<number>`, and the tag is
-posted as a comment on the PR.
+Open http://localhost:5173. Data is stored in `./pb_data`. The PocketBase admin console is available on http://localhost:8090/_/.
