@@ -2,42 +2,48 @@ set shell := ["bash", "-uc"]
 
 COMPOSE := "docker compose"
 FRONTEND := "frontend"
+TEST_IMAGE := "kanban-frontend-test"
+BACKEND_IMAGE := "kanban-backend:latest"
 
 # Print the list of available recipes
 default:
     @just --list
 
-# Install all dependencies (npm ci in the frontend)
-setup:
-    cd {{FRONTEND}} && npm ci
+# Build the frontend tooling image (node + deps) used by lint/format/typecheck/build
+test-image:
+    docker build -f {{FRONTEND}}/Dockerfile.test -t {{TEST_IMAGE}} {{FRONTEND}}
 
-# Run ESLint over the frontend sources
-lint:
-    cd {{FRONTEND}} && npm run lint
+# Build the backend image used by the e2e tests
+backend-image:
+    docker build -t {{BACKEND_IMAGE}} ./backend
 
-# Run prettier in write mode over the frontend sources
-format:
-    cd {{FRONTEND}} && npm run format
+# Run ESLint over the frontend sources (in a container)
+lint: test-image
+    docker run --rm {{TEST_IMAGE}} npm run lint
 
-# Type-check the frontend (tsc --noEmit, no output)
-typecheck:
-    cd {{FRONTEND}} && npx tsc --noEmit
+# Run prettier in write mode over the frontend sources (in a container)
+format: test-image
+    docker run --rm {{TEST_IMAGE}} npm run format
 
-# Build the frontend production bundle (type-check + vite build)
-build:
-    cd {{FRONTEND}} && npm run build
+# Type-check the frontend, no output (in a container)
+typecheck: test-image
+    docker run --rm {{TEST_IMAGE}} npx tsc --noEmit
+
+# Build the frontend production bundle, type-check + vite build (in a container)
+build: test-image
+    docker run --rm {{TEST_IMAGE}} npm run build
 
 # Build both Docker images
 build-images:
     {{COMPOSE}} build
 
-# Run the full frontend test suite (lint + typecheck + build)
+# Run the full test suite (lint + typecheck + build + e2e, all in containers)
 test:
-    just lint typecheck build
+    just lint typecheck build test-e2e
 
 # Run Playwright e2e tests (spawns an isolated test backend container)
-test-e2e:
-    cd {{FRONTEND}} && npm run test:e2e
+test-e2e: backend-image
+    bash {{FRONTEND}}/scripts/e2e.sh
 
 # Bring the full stack up (builds images on first run)
 up:

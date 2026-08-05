@@ -175,7 +175,7 @@ export default function DashboardPage() {
     for (const k of Object.keys(b) as SectionKey[]) {
       b[k].sort(
         (a, c) =>
-          (utcDayMs(a.dueDate) ?? 0) - (utcDayMs(c.dueDate) ?? 0) ||
+          new Date(a.dueDate).getTime() - new Date(c.dueDate).getTime() ||
           a.status.localeCompare(c.status)
       )
     }

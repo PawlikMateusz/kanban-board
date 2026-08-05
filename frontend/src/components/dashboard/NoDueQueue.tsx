@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { GripVertical, X } from "lucide-react"
+import { Check, GripVertical, X } from "lucide-react"
 import {
   DndContext,
   DragOverlay,
@@ -20,6 +20,7 @@ import {
   useRemoveFromQueue,
   useReorderQueue,
   useTasks,
+  useUpdateTask,
 } from "@/api/kanban"
 import { TaskCard } from "@/components/task/TaskCard"
 import { useUI } from "@/components/ui-provider"
@@ -39,6 +40,7 @@ function QueueRow({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
   })
+  const updateTask = useUpdateTask()
   return (
     <div
       ref={setNodeRef}
@@ -56,6 +58,15 @@ function QueueRow({
         <GripVertical className="h-4 w-4" />
       </button>
       <TaskCard bare task={task} onClick={() => onOpen(task.id)} showProject />
+      <button
+        type="button"
+        data-testid="queue-complete"
+        title="Mark as done"
+        onClick={() => updateTask.mutate({ id: task.id, data: { status: "done" } })}
+        className="shrink-0 rounded-full border bg-background p-1.5 text-emerald-500 opacity-0 shadow-sm transition-opacity hover:bg-emerald-500 hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
+      >
+        <Check className="h-3.5 w-3.5" />
+      </button>
       <button
         type="button"
         onClick={onRemove}
