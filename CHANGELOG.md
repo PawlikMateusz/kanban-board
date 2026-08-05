@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/PawlikMateusz/kanban-board/compare/v1.0.1...v1.1.0) (2026-08-05)
+
+
+### Features
+
+* order cards by due date, run tests in dokcer ([31e7bba](https://github.com/PawlikMateusz/kanban-board/commit/31e7bbaf08fd2bebfada0901141b0eb442d9357f))
+
 ## [1.0.1](https://github.com/PawlikMateusz/kanban-board/compare/v1.0.0...v1.0.1) (2026-08-04)
 
 
