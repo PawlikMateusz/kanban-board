@@ -1,4 +1,4 @@
-import { CalendarDays, ListChecks, MessageSquare, Paperclip } from "lucide-react"
+import { CalendarDays, ListChecks, MessageSquare, Paperclip, Smartphone } from "lucide-react"
 import type { Task } from "@/types"
 import { cn } from "@/lib/utils"
 import { todayUtcMs, utcDayMs, utcMonthDayTime } from "@/lib/dates"
@@ -65,6 +65,15 @@ export function TaskCard({
         <span data-testid="comment-count" className="inline-flex items-center gap-1" title="Has comments">
           <MessageSquare className="h-3 w-3" />
           {comments}
+        </span>
+      )}
+      {task.caldavUrl && (
+        <span
+          data-testid="caldav-synced"
+          className="inline-flex items-center gap-1"
+          title="Added to phone reminders"
+        >
+          <Smartphone className="h-3 w-3" />
         </span>
       )}
     </>

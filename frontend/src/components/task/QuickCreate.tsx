@@ -107,128 +107,124 @@ export default function QuickCreate() {
   }
 
   return (
-    <div
-      data-testid="quick-create"
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[12vh]"
-      onMouseDown={cancel}
-    >
-      <div
-        className="w-full max-w-lg rounded-lg border bg-background p-4 shadow-2xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            New task
-          </span>
-          <div className="ml-auto flex items-center gap-2">
-            <Select value={projectId} onValueChange={setProjectId}>
-              <SelectTrigger data-testid="qc-project" className="h-8 w-auto gap-2 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {projects.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-              <SelectTrigger data-testid="qc-status" className="h-8 w-auto gap-2 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUSES.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <div data-testid="quick-create" className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onMouseDown={cancel} />
+      <div className="pointer-events-none absolute inset-0 flex items-start justify-center p-4 pt-[12vh]">
+        <div className="pointer-events-auto w-full max-w-lg rounded-lg border bg-background p-4 shadow-2xl">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              New task
+            </span>
+            <div className="ml-auto flex items-center gap-2">
+              <Select value={projectId} onValueChange={setProjectId}>
+                <SelectTrigger data-testid="qc-project" className="h-8 w-auto gap-2 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+                <SelectTrigger data-testid="qc-status" className="h-8 w-auto gap-2 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUSES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </div>
 
-        <Input
-          ref={inputRef}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit()
-            if (e.key === "Escape") cancel()
-          }}
-          placeholder="What needs to be done?"
-          className="h-10 text-base"
-        />
+          <Input
+            ref={inputRef}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commit()
+              if (e.key === "Escape") cancel()
+            }}
+            placeholder="What needs to be done?"
+            className="h-10 text-base"
+          />
 
-        <div className="mt-3">
-          <DateTimePicker value={dueDate} onChange={setDueDate} />
-        </div>
-
-        <div className="mt-3">
-          <div className="flex flex-wrap gap-1.5">
-            {visibleLabels.map((l) => {
-              const on = selectedLabels.includes(l.id)
-              return (
-                <button
-                  key={l.id}
-                  type="button"
-                  onClick={() => toggleLabel(l.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors",
-                    on
-                      ? "border-primary bg-primary/10 font-medium"
-                      : "text-muted-foreground hover:bg-accent"
-                  )}
-                >
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: l.color || "#64748b" }}
-                  />
-                  {l.name}
-                </button>
-              )
-            })}
-            {labels.length === 0 && (
-              <span className="text-xs text-muted-foreground">No labels yet.</span>
-            )}
-            {labels.length > 0 && visibleLabels.length === 0 && newLabel.trim() && (
-              <span className="text-xs text-muted-foreground">
-                No matching labels — type and press Enter to add "{newLabel.trim()}"
-              </span>
-            )}
+          <div className="mt-3">
+            <DateTimePicker value={dueDate} onChange={setDueDate} />
           </div>
-          <div className="mt-2 flex items-center gap-2">
-            <Input
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault()
-                  void addLabel()
-                }
-              }}
-              placeholder="New label name…"
-              className="h-8 flex-1 text-xs"
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void addLabel()}
-              disabled={!newLabel.trim()}
-            >
-              <Plus className="h-3 w-3" /> Add
+
+          <div className="mt-3">
+            <div className="flex flex-wrap gap-1.5">
+              {visibleLabels.map((l) => {
+                const on = selectedLabels.includes(l.id)
+                return (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => toggleLabel(l.id)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors",
+                      on
+                        ? "border-primary bg-primary/10 font-medium"
+                        : "text-muted-foreground hover:bg-accent"
+                    )}
+                  >
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: l.color || "#64748b" }}
+                    />
+                    {l.name}
+                  </button>
+                )
+              })}
+              {labels.length === 0 && (
+                <span className="text-xs text-muted-foreground">No labels yet.</span>
+              )}
+              {labels.length > 0 && visibleLabels.length === 0 && newLabel.trim() && (
+                <span className="text-xs text-muted-foreground">
+                  No matching labels — type and press Enter to add "{newLabel.trim()}"
+                </span>
+              )}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <Input
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    void addLabel()
+                  }
+                }}
+                placeholder="New label name…"
+                className="h-8 flex-1 text-xs"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void addLabel()}
+                disabled={!newLabel.trim()}
+              >
+                <Plus className="h-3 w-3" /> Add
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              <kbd className="rounded border bg-muted px-1 py-0.5 text-[10px]">Enter</kbd> to save ·{" "}
+              <kbd className="rounded border bg-muted px-1 py-0.5 text-[10px]">Esc</kbd> to cancel
+            </span>
+            <Button size="sm" onClick={commit} disabled={!title.trim()}>
+              Save
             </Button>
           </div>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            <kbd className="rounded border bg-muted px-1 py-0.5 text-[10px]">Enter</kbd> to save ·{" "}
-            <kbd className="rounded border bg-muted px-1 py-0.5 text-[10px]">Esc</kbd> to cancel
-          </span>
-          <Button size="sm" onClick={commit} disabled={!title.trim()}>
-            Save
-          </Button>
         </div>
       </div>
     </div>
