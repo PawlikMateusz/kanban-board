@@ -5,6 +5,8 @@ import {
   createTask,
   dashboardSection,
   dragHandleTo,
+  getTask,
+  taskCard,
   utcDaysFromNow,
   wipeAllData,
 } from "./helpers"
@@ -13,9 +15,15 @@ test.describe("Q – no-due queue", () => {
   test.beforeEach(() => wipeAllData())
   test.afterAll(() => cleanup())
 
+  // The dnd-kit sortable row wrapper also exposes role="button", so scope to
+  // the inner card button (same convention as columnCard in helpers.ts).
+  const queueCard = (page: import("@playwright/test").Page, title: string) =>
+    dashboardSection(page, "queue").locator('[data-testid="task-card"]', { hasText: title })
+
   const queueTitles = async (page: import("@playwright/test").Page) => {
     const cards = dashboardSection(page, "queue").locator('[data-testid="task-card"]')
-    return (await cards.allTextContents()).map((t) => t.trim())
+    // Queue cards also render the project name, so read just the title line.
+    return (await cards.locator(".truncate.text-sm").allTextContents()).map((t) => t.trim())
   }
 
   test("Q1 – no-due task can be added to the queue from the drawer", async ({ page }) => {
@@ -24,7 +32,7 @@ test.describe("Q – no-due queue", () => {
 
     await page.goto("/")
     await page.locator("aside").getByRole("link", { name: "Q1 Project" }).click()
-    await page.getByRole("button", { name: "Q1 card" }).click()
+    await taskCard(page, "Q1 card").click()
 
     const addBtn = page.locator('[data-testid="drawer-add-queue"]')
     await expect(addBtn).toBeVisible()
@@ -34,7 +42,7 @@ test.describe("Q – no-due queue", () => {
     await page.goto("/")
     const queue = dashboardSection(page, "queue")
     await expect(queue).toBeVisible()
-    await expect(queue.getByRole("button", { name: "Q1 card" })).toBeVisible()
+    await expect(queueCard(page, "Q1 card")).toBeVisible()
     await expect(page.locator('[data-testid="section-count-queue"]')).toHaveText("1")
   })
 
@@ -44,7 +52,7 @@ test.describe("Q – no-due queue", () => {
 
     await page.goto("/")
     await page.locator("aside").getByRole("link", { name: "Q2 Project" }).click()
-    await page.getByRole("button", { name: "Q2 scheduled" }).click()
+    await taskCard(page, "Q2 scheduled").click()
 
     await expect(page.locator('[data-testid="drawer-add-queue"]')).toBeDisabled()
     await expect(dashboardSection(page, "queue").locator('[data-testid="task-card"]')).toHaveCount(0)
@@ -52,18 +60,27 @@ test.describe("Q – no-due queue", () => {
 
   test("Q3 – task can be removed from the queue", async ({ page }) => {
     const inbox = await createProject("Q3 Project")
-    await createTask({ project: inbox.id, title: "Q3 queued", queued: true, queueOrder: 1024 })
+    const queuedTask = await createTask({
+      project: inbox.id,
+      title: "Q3 queued",
+      queued: true,
+      queueOrder: 1024,
+    })
 
     await page.goto("/")
     const queue = dashboardSection(page, "queue")
-    await expect(queue.getByRole("button", { name: "Q3 queued" })).toBeVisible()
+    await expect(queueCard(page, "Q3 queued")).toBeVisible()
 
-    await queue.getByRole("button", { name: "Q3 queued" }).click()
+    await queueCard(page, "Q3 queued").click()
     await expect(page.locator('[data-testid="drawer-remove-queue"]')).toBeVisible()
     await page.locator('[data-testid="drawer-remove-queue"]').click()
 
+    // Removal keeps the task but un-queues it; when it was the only content the
+    // whole dashboard (including the queue section) is replaced by the empty
+    // state, so verify via the API and the drawer instead.
+    await expect.poll(async () => (await getTask(queuedTask.id)).queued).toBe(false)
+    await expect(page.locator('[data-testid="drawer-add-queue"]')).toBeVisible()
     await expect(queue.locator('[data-testid="task-card"]')).toHaveCount(0)
-    await expect(page.locator('[data-testid="section-count-queue"]')).toHaveText("0")
   })
 
   test("Q4 – queue cards can be reordered by dragging", async ({ page }) => {
