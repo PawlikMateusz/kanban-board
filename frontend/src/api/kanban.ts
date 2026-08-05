@@ -583,6 +583,151 @@ export function useMoveTaskToProject() {
 }
 
 // ---------------------------------------------------------------------------
+// No-due queue
+// ---------------------------------------------------------------------------
+
+/** Max gap-based order currently used in the no-due queue. */
+export function nextQueueOrder(tasks: Task[]): number {
+  const max = tasks.filter((t) => t.queued).reduce((acc, t) => Math.max(acc, t.queueOrder ?? 0), 0)
+  return max + ORDER_GAP
+}
+
+/**
+ * Computes the task list after moving `taskId` to `toIndex` within the no-due
+ * queue. Uses the same gap-based ordering as the board columns and returns the
+ * optimistic `next` list plus the tasks whose `queueOrder` actually changed.
+ */
+export function applyQueueReorder(
+  tasks: Task[],
+  taskId: string,
+  toIndex: number
+): { next: Task[]; changed: Task[] } {
+  const task = tasks.find((t) => t.id === taskId)
+  if (!task) return { next: tasks, changed: [] }
+
+  const siblings = tasks
+    .filter((t) => t.queued && t.id !== taskId)
+    .sort((a, b) => (a.queueOrder ?? 0) - (b.queueOrder ?? 0) || a.created.localeCompare(b.created))
+
+  const idx = Math.max(0, Math.min(toIndex, siblings.length))
+  const prev = siblings[idx - 1] ?? null
+  const next = siblings[idx] ?? null
+
+  let newOrder: number
+  let renormalise = false
+  if (!prev && !next) {
+    newOrder = ORDER_GAP
+  } else if (!prev && next) {
+    newOrder = (next.queueOrder ?? 0) - ORDER_GAP
+  } else if (prev && !next) {
+    newOrder = (prev.queueOrder ?? 0) + ORDER_GAP
+  } else {
+    newOrder = ((prev.queueOrder ?? 0) + (next.queueOrder ?? 0)) / 2
+    if (
+      newOrder <= (prev.queueOrder ?? 0) ||
+      newOrder >= (next.queueOrder ?? 0) ||
+      (next.queueOrder ?? 0) - (prev.queueOrder ?? 0) <= 1
+    ) {
+      renormalise = true
+    }
+  }
+
+  if (renormalise) {
+    const byId = new Map(tasks.map((t) => [t.id, t]))
+    const changedMap = new Map<string, number>()
+    const ids = [...siblings.map((t) => t.id)]
+    ids.splice(idx, 0, taskId)
+    ids.forEach((id, i) => {
+      const order = (i + 1) * ORDER_GAP
+      const orig = byId.get(id)!
+      if ((orig.queueOrder ?? 0) !== order) changedMap.set(id, order)
+    })
+    const nextList = tasks.map((t) => {
+      const o = changedMap.get(t.id)
+      return o !== undefined ? { ...t, queued: true, queueOrder: o } : t
+    })
+    const changed = [...changedMap.entries()].map(([id, order]) => ({
+      ...byId.get(id)!,
+      queued: true,
+      queueOrder: order,
+    }))
+    return { next: nextList, changed }
+  }
+
+  if (task.queued !== true || (task.queueOrder ?? 0) !== newOrder) {
+    const moved = { ...task, queued: true, queueOrder: newOrder }
+    return { next: tasks.map((t) => (t.id === taskId ? moved : t)), changed: [moved] }
+  }
+  return { next: tasks, changed: [] }
+}
+
+export function useAddToQueue() {
+  const qc = useQueryClient()
+  const { toast } = useToast()
+  return useMutation({
+    mutationFn: ({ id, queueOrder }: { id: string; queueOrder: number }) =>
+      pb.collection("tasks").update<Task>(id, { queued: true, queueOrder }),
+    onMutate: async ({ id, queueOrder }) => {
+      await qc.cancelQueries({ queryKey: queryKeys.tasks })
+      const prev = qc.getQueryData<Task[]>(queryKeys.tasks) ?? []
+      qc.setQueryData(
+        queryKeys.tasks,
+        prev.map((t) => (t.id === id ? { ...t, queued: true, queueOrder } : t))
+      )
+      return { prev }
+    },
+    onError: (e, _v, ctx) => {
+      toast(friendlyError(e))
+      if (ctx) qc.setQueryData(queryKeys.tasks, ctx.prev)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.tasks }),
+  })
+}
+
+export function useRemoveFromQueue() {
+  const qc = useQueryClient()
+  const { toast } = useToast()
+  return useMutation({
+    mutationFn: (id: string) =>
+      pb.collection("tasks").update<Task>(id, { queued: false, queueOrder: null }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: queryKeys.tasks })
+      const prev = qc.getQueryData<Task[]>(queryKeys.tasks) ?? []
+      qc.setQueryData(
+        queryKeys.tasks,
+        prev.map((t) => (t.id === id ? { ...t, queued: false, queueOrder: null } : t))
+      )
+      return { prev }
+    },
+    onError: (e, _v, ctx) => {
+      toast(friendlyError(e))
+      if (ctx) qc.setQueryData(queryKeys.tasks, ctx.prev)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.tasks }),
+  })
+}
+
+/**
+ * Persists a new queue ordering. `ordered` is the full queued list in display
+ * order with its new `queueOrder` values.
+ */
+export function useReorderQueue() {
+  const qc = useQueryClient()
+  const { toast } = useToast()
+  return useMutation({
+    mutationFn: (ordered: { id: string; queueOrder: number }[]) =>
+      Promise.all(
+        ordered.map(({ id, queueOrder }) => pb.collection("tasks").update(id, { queueOrder }))
+      ),
+    onError: (_e) => {
+      toast("Failed to reorder queue")
+      qc.invalidateQueries({ queryKey: queryKeys.tasks, refetchType: "all" })
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.tasks }),
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Comments
 // ---------------------------------------------------------------------------
 
@@ -791,6 +936,67 @@ export function useDeleteChecklistItem() {
       if (ctx?.taskId) qc.invalidateQueries({ queryKey: queryKeys.checklist(ctx.taskId) })
       qc.invalidateQueries({ queryKey: ["checklistStats"] })
     },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// CalDAV (optional Radicale sync for iOS Reminders)
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether the backend is configured to sync with Radicale. The UI hides the
+ * calendar controls entirely when this is false (env vars not set).
+ */
+export function useCalDavConfig() {
+  return useQuery({
+    queryKey: ["caldavConfig"],
+    queryFn: async () => {
+      try {
+        const res = await pb.send<{ enabled: boolean }>("/api/caldav/config", {})
+        return res?.enabled ?? false
+      } catch {
+        return false
+      }
+    },
+    staleTime: 5 * 60_000,
+  })
+}
+
+export type SendToCalendarInput = {
+  taskId: string
+}
+
+export function useSendToCalendar() {
+  const qc = useQueryClient()
+  const { toast } = useToast()
+  return useMutation({
+    mutationFn: ({ taskId }: SendToCalendarInput) =>
+      pb.send<{ success: boolean; resource: string }>("/api/caldav/sync", {
+        method: "POST",
+        body: { taskId },
+      }),
+    onSuccess: (_res) => {
+      toast("Synced to calendar", "success")
+      qc.invalidateQueries({ queryKey: queryKeys.tasks })
+    },
+    onError: (e) => toast(friendlyError(e)),
+  })
+}
+
+export function useRemoveFromCalendar() {
+  const qc = useQueryClient()
+  const { toast } = useToast()
+  return useMutation({
+    mutationFn: (taskId: string) =>
+      pb.send<{ success: boolean }>("/api/caldav/remove", {
+        method: "POST",
+        body: { taskId },
+      }),
+    onSuccess: () => {
+      toast("Removed from calendar", "success")
+      qc.invalidateQueries({ queryKey: queryKeys.tasks })
+    },
+    onError: (e) => toast(friendlyError(e)),
   })
 }
 

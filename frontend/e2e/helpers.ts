@@ -31,6 +31,8 @@ export interface Task {
   order: number
   labels: string[]
   attachments: string[]
+  queued?: boolean
+  queueOrder?: number | null
   created: string
   updated: string
 }
@@ -138,6 +140,8 @@ export async function createTask(opts: {
   dueDate?: string
   labels?: string[]
   order?: number
+  queued?: boolean
+  queueOrder?: number
 }) {
   return track(
     "tasks",
@@ -149,6 +153,8 @@ export async function createTask(opts: {
       dueDate: opts.dueDate ?? "",
       labels: opts.labels ?? [],
       order: opts.order ?? 1024,
+      queued: opts.queued ?? false,
+      queueOrder: opts.queueOrder ?? null,
     })
   )
 }

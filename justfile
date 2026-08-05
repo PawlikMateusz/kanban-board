@@ -52,6 +52,14 @@ dev:
 down:
     {{COMPOSE}} down
 
+# Bring the local testing stack up (builds both images from source, no GHCR pull)
+test-up:
+    {{COMPOSE}} -f docker-compose.local.yml up -d --build
+
+# Bring the local testing stack down
+test-down:
+    {{COMPOSE}} -f docker-compose.local.yml down
+
 # Tail logs of all services
 logs:
     {{COMPOSE}} logs -f

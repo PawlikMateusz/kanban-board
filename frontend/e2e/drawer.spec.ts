@@ -190,4 +190,17 @@ test.describe("TE – task details drawer", () => {
     await page.reload()
     await expect(columnCard(page, "todo", "TE8 task")).toBeVisible()
   })
+
+  test("TE9 – CalDAV section hidden when not configured", async ({ page }) => {
+    const project = await createProject("TE Project")
+    await createTask({ project: project.id, title: "TE9 caldav", dueDate: utcDaysFromNow(1) })
+
+    await page.goto(`/projects/${project.id}`)
+    await taskCard(page, "TE9 caldav").click()
+
+    // The test backend runs without RADICALE_* env vars, so the calendar sync
+    // controls must not be rendered at all.
+    await expect(page.getByPlaceholder("Task title")).toBeVisible()
+    await expect(page.locator('[data-testid="caldav-section"]')).toHaveCount(0)
+  })
 })

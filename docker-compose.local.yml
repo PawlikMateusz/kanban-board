@@ -1,9 +1,10 @@
+# Local testing stack: always builds both images from source
+# (no GHCR pull). Usage: docker compose -f docker-compose.local.yml up -d --build
 services:
   backend:
-    image: ghcr.io/pawlikmateusz/kanban-backend:latest
     build:
       context: ./backend
-    container_name: kanban-backend
+    container_name: kanban-backend-local
     restart: unless-stopped
     ports:
       - "8090:8080"
@@ -21,10 +22,9 @@ services:
       retries: 10
 
   frontend:
-    image: ghcr.io/pawlikmateusz/kanban-frontend:latest
     build:
       context: ./frontend
-    container_name: kanban-frontend
+    container_name: kanban-frontend-local
     restart: unless-stopped
     ports:
       - "5173:80"

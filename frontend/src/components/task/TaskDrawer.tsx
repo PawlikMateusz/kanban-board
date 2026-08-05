@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react"
-import { CalendarDays, Check, FolderKanban, Trash2, X } from "lucide-react"
+import { CalendarDays, Check, FolderKanban, ListPlus, ListX, Trash2, X } from "lucide-react"
 import {
   nextOrder,
+  nextQueueOrder,
+  useAddToQueue,
   useDeleteTask,
   useLabels,
   useMoveTaskToProject,
   useProjects,
+  useRemoveFromQueue,
   useTasks,
   useUpdateTask,
 } from "@/api/kanban"
@@ -23,6 +26,7 @@ import {
 } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
+import CalendarSync from "@/components/task/CalendarSync"
 import CommentList from "@/components/task/CommentList"
 import AttachmentList from "@/components/task/AttachmentList"
 import { LabelBadge } from "@/components/task/LabelBadge"
@@ -43,6 +47,8 @@ export default function TaskDrawer() {
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
   const moveTaskToProject = useMoveTaskToProject()
+  const addToQueue = useAddToQueue()
+  const removeFromQueue = useRemoveFromQueue()
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -218,9 +224,55 @@ export default function TaskDrawer() {
                   value={dueDate}
                   onChange={(iso) => {
                     setDueDate(iso)
-                    updateTask.mutate({ id: task.id, data: { dueDate: iso } })
+                    // A scheduled card no longer belongs in the no-due queue.
+                    updateTask.mutate({
+                      id: task.id,
+                      data: { dueDate: iso, queued: iso ? false : task.queued },
+                    })
                   }}
                 />
+              </div>
+
+              <CalendarSync task={task} />
+
+              <div>
+                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Queue
+                </p>
+                {task.queued ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    data-testid="drawer-remove-queue"
+                    onClick={() => removeFromQueue.mutate(task.id)}
+                  >
+                    <ListX className="h-4 w-4" /> Remove from queue
+                  </Button>
+                ) : dueDate ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    data-testid="drawer-add-queue"
+                    disabled
+                    title="Only cards without a due date can be added to the queue"
+                  >
+                    <ListPlus className="h-4 w-4" /> Add to queue
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    data-testid="drawer-add-queue"
+                    onClick={() =>
+                      addToQueue.mutate({ id: task.id, queueOrder: nextQueueOrder(tasks) })
+                    }
+                  >
+                    <ListPlus className="h-4 w-4" /> Add to queue
+                  </Button>
+                )}
               </div>
 
               <Checklist task={task} />

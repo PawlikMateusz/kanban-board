@@ -5,6 +5,7 @@ import { useUI } from "@/components/ui-provider"
 import { useQuickCreate } from "@/hooks/useQuickCreate"
 import { TaskCard } from "@/components/task/TaskCard"
 import MiniCalendar from "@/components/dashboard/MiniCalendar"
+import NoDueQueue from "@/components/dashboard/NoDueQueue"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { todayUtcMs, utcDayMs } from "@/lib/dates"
@@ -197,8 +198,7 @@ export default function DashboardPage() {
         title: s.label,
         count: tasksInSection.length,
         headerDimmed:
-          hoveredDay !== null &&
-          !tasksInSection.some((t) => utcDayMs(t.dueDate) === hoveredDay),
+          hoveredDay !== null && !tasksInSection.some((t) => utcDayMs(t.dueDate) === hoveredDay),
         content: (
           <Section tasks={tasksInSection} hoveredDay={hoveredDay} onClick={(id) => openTask(id)} />
         ),
@@ -206,6 +206,13 @@ export default function DashboardPage() {
     }
     return blocks
   }, [buckets, openTask, hoveredDay])
+
+  const queueCount = useMemo(
+    () => tasks.filter((t) => t.queued && t.status !== "done" && utcDayMs(t.dueDate) === null).length,
+    [tasks]
+  )
+
+  const hasContent = visible.length > 0 || queueCount > 0
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -224,7 +231,7 @@ export default function DashboardPage() {
 
       <div className="mx-auto flex max-w-6xl items-start gap-6 px-4 py-5">
         <div className="min-w-0 flex-1">
-          {visible.length === 0 ? (
+          {!hasContent ? (
             <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
               No tasks yet. Create one with the "New task" button above.
             </p>
@@ -247,6 +254,12 @@ export default function DashboardPage() {
                   )}
                 </Fragment>
               ))}
+              {visible.length > 0 && (
+                <div data-testid="queue-separator" className="py-3">
+                  <div className="border-t-2 border-dashed border-border" />
+                </div>
+              )}
+              <NoDueQueue onOpen={openTask} />
             </div>
           )}
         </div>
