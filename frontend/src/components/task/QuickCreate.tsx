@@ -9,6 +9,7 @@ import {
   useUpdateTask,
 } from "@/api/kanban"
 import { useUI } from "@/components/ui-provider"
+import { useToast } from "@/components/ui/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils"
  */
 export default function QuickCreate() {
   const { quickCreate, closeQuickCreate } = useUI()
+  const { toast } = useToast()
   const { data: projects = [] } = useProjects()
   const { data: labels = [] } = useLabels()
   const { data: tasks = [] } = useTasks()
@@ -89,10 +91,15 @@ export default function QuickCreate() {
   function commit() {
     const t = title.trim()
     if (t) {
-      updateTask.mutate({
-        id: create.taskId,
-        data: { title: t, project: projectId, status, labels: selectedLabels, dueDate },
-      })
+      void updateTask
+        .mutateAsync({
+          id: create.taskId,
+          data: { title: t, project: projectId, status, labels: selectedLabels, dueDate },
+        })
+        .then(() => toast("Task created successfully", "success"))
+        .catch(() => {
+          // useUpdateTask already surfaces the error toast on failure.
+        })
     } else {
       deleteTask.mutate(create.taskId)
     }
