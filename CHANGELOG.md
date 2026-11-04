@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/PawlikMateusz/kanban-board/compare/v1.1.0...v1.2.0) (2026-11-04)
+
+
+### Features
+
+* add synced light/dark themes and safer task handling ([3003a92](https://github.com/PawlikMateusz/kanban-board/commit/3003a929b04322c8efab3a5b6a2d8da2408f829e))
+
 # [1.1.0](https://github.com/PawlikMateusz/kanban-board/compare/v1.0.1...v1.1.0) (2026-08-05)
 
 
