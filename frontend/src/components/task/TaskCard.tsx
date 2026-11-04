@@ -5,6 +5,17 @@ import { todayUtcMs, utcDayMs, utcMonthDayTime } from "@/lib/dates"
 import { useChecklistStats, useCommentCounts } from "@/api/kanban"
 import { LabelBadge } from "@/components/task/LabelBadge"
 
+function ChecklistProgress({ pct }: { pct: number }) {
+  return (
+    <div className="mb-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
+      <div
+        className="h-full rounded-full bg-emerald-500 transition-all"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  )
+}
+
 export function TaskCard({
   task,
   onClick,
@@ -42,7 +53,7 @@ export function TaskCard({
         <span
           className={cn(
             "inline-flex items-center gap-1",
-            overdue && "font-medium text-red-400"
+            overdue && "font-medium text-destructive"
           )}
         >
           <CalendarDays className="h-3 w-3" />
@@ -56,13 +67,21 @@ export function TaskCard({
         </span>
       )}
       {task.attachments.length > 0 && (
-        <span data-testid="attachment-count" className="inline-flex items-center gap-1" title="Has attachments">
+        <span
+          data-testid="attachment-count"
+          className="inline-flex items-center gap-1"
+          title="Has attachments"
+        >
           <Paperclip className="h-3 w-3" />
           {task.attachments.length}
         </span>
       )}
       {comments > 0 && (
-        <span data-testid="comment-count" className="inline-flex items-center gap-1" title="Has comments">
+        <span
+          data-testid="comment-count"
+          className="inline-flex items-center gap-1"
+          title="Has comments"
+        >
           <MessageSquare className="h-3 w-3" />
           {comments}
         </span>
@@ -87,14 +106,7 @@ export function TaskCard({
         onClick={onClick}
         className="min-w-0 flex-1 py-0.5 text-left"
       >
-        {checklistPct !== null && (
-          <div className="mb-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-emerald-500 transition-all"
-              style={{ width: `${checklistPct}%` }}
-            />
-          </div>
-        )}
+        {checklistPct !== null && <ChecklistProgress pct={checklistPct} />}
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium leading-snug">{task.title}</div>
@@ -122,20 +134,9 @@ export function TaskCard({
       type="button"
       data-testid="task-card"
       onClick={onClick}
-      className={cn(
-        "w-full cursor-pointer text-left rounded-md border bg-card p-3 shadow-sm transition-colors hover:border-foreground/20 hover:shadow-md"
-      )}
+      className="w-full cursor-pointer rounded-md border bg-card p-3 text-left shadow-sm transition-colors hover:border-foreground/20 hover:shadow-md"
     >
-      {checklistPct !== null && (
-        <div
-          className={cn("mb-1.5 h-1 overflow-hidden rounded-full bg-muted", !bare && "w-full")}
-        >
-          <div
-            className="h-full rounded-full bg-emerald-500 transition-all"
-            style={{ width: `${checklistPct}%` }}
-          />
-        </div>
-      )}
+      {checklistPct !== null && <ChecklistProgress pct={checklistPct} />}
       <div className="text-sm font-medium leading-snug line-clamp-2">{task.title}</div>
       {task.description && (
         <div className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs text-muted-foreground">

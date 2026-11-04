@@ -1,5 +1,14 @@
 import { test, expect } from "@playwright/test"
-import { cleanup, createComment, createProject, createTask, listComments, listProjects, listTasks, wipeAllData } from "./helpers"
+import {
+  cleanup,
+  createComment,
+  createProject,
+  createTask,
+  listComments,
+  listProjects,
+  listTasks,
+  wipeAllData,
+} from "./helpers"
 
 test.describe("TK – settings", () => {
   test.beforeEach(() => wipeAllData())
@@ -42,7 +51,9 @@ test.describe("TK – settings", () => {
     await input.fill("TK2 new")
     await input.blur()
 
-    await expect.poll(async () => (await listProjects()).find((p) => p.name === "TK2 new")).toBeTruthy()
+    await expect
+      .poll(async () => (await listProjects()).find((p) => p.name === "TK2 new"))
+      .toBeTruthy()
   })
 
   test("TK3 – delete project", async ({ page }) => {
@@ -64,8 +75,12 @@ test.describe("TK – settings", () => {
     await page.getByRole("button", { name: "Delete" }).click()
 
     await expect(projectRow(page, "TK3 project")).toHaveCount(0)
-    await expect.poll(async () => (await listProjects()).find((p) => p.name === "TK3 project")).toBeFalsy()
-    await expect.poll(async () => (await listTasks()).filter((t) => t.project === project.id)).toHaveLength(0)
+    await expect
+      .poll(async () => (await listProjects()).find((p) => p.name === "TK3 project"))
+      .toBeFalsy()
+    await expect
+      .poll(async () => (await listTasks()).filter((t) => t.project === project.id))
+      .toHaveLength(0)
     await expect.poll(async () => (await listComments(task.id)).length).toBe(0)
   })
 
@@ -105,5 +120,23 @@ test.describe("TK – settings", () => {
     await expect
       .poll(async () => (await listProjects()).find((p) => p.name === "TK5 project")?.color)
       .toBe("#123456")
+  })
+
+  test("TK6 – theme persists across reloads (server-side)", async ({ page }) => {
+    await page.goto("/settings")
+    const html = page.locator("html")
+
+    await page.getByTestId("theme-dark").click()
+    await expect(html).toHaveClass(/dark/)
+
+    // Clearing the local cache proves the preference comes from the server.
+    await page.evaluate(() => localStorage.removeItem("kanban-theme"))
+    await page.reload()
+    await expect(html).toHaveClass(/dark/)
+
+    await page.getByTestId("theme-light").click()
+    await expect(html).not.toHaveClass(/dark/)
+    await page.reload()
+    await expect(html).not.toHaveClass(/dark/)
   })
 })

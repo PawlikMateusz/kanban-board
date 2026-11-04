@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Select,
   SelectContent,
@@ -54,12 +55,14 @@ export default function TaskDrawer() {
   const [description, setDescription] = useState("")
   const [dueDate, setDueDate] = useState("")
   const [projectOpen, setProjectOpen] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     if (task) {
       setTitle(task.title)
       setDescription(task.description ?? "")
       setDueDate(task.dueDate ?? "")
+      setConfirmDelete(false)
     }
   }, [task?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -172,7 +175,7 @@ export default function TaskDrawer() {
                 variant="ghost"
                 size="icon"
                 title="Delete task"
-                onClick={() => deleteTask.mutate(task.id, { onSuccess: closeTask })}
+                onClick={() => setConfirmDelete(true)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -295,6 +298,20 @@ export default function TaskDrawer() {
           </div>
         )}
       </aside>
+
+      <ConfirmDialog
+        open={confirmDelete && !!task}
+        title="Delete task?"
+        description={`“${task?.title || "Untitled"}” will be permanently deleted along with its comments and checklist. This cannot be undone.`}
+        confirmLabel="Delete task"
+        testId="delete-task-confirm"
+        onConfirm={() => {
+          if (!task) return
+          setConfirmDelete(false)
+          deleteTask.mutate(task.id, { onSuccess: closeTask })
+        }}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </>
   )
 }

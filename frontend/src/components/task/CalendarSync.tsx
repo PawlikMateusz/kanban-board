@@ -78,8 +78,8 @@ export default function CalendarSync({ task }: { task: Task }) {
             className={cn(
               "shrink-0",
               outOfSync
-                ? "border-amber-300 bg-amber-50 text-amber-800"
-                : "border-emerald-300 text-emerald-700"
+                ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/50 dark:text-amber-300"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/50 dark:text-emerald-300"
             )}
             title={
               outOfSync

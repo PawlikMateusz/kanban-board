@@ -69,7 +69,11 @@ test.describe("TF – checklist", () => {
 
   test("TF3 – uncheck an item", async ({ page }) => {
     const project = await createProject("TF Project")
-    const task = await createTask({ project: project.id, title: "TF3 task", dueDate: utcDaysFromNow(0) })
+    const task = await createTask({
+      project: project.id,
+      title: "TF3 task",
+      dueDate: utcDaysFromNow(0),
+    })
     await page.goto("/")
 
     await openTask(page, "TF3 task")
@@ -98,7 +102,10 @@ test.describe("TF – checklist", () => {
     await expect(items).toHaveCount(2)
     await items.first().getByRole("button", { name: "Delete item" }).click()
     await expect(items).toHaveCount(1)
-    await drawer(page).locator('[data-testid="checklist-item"]').getByRole("button", { name: "Delete item" }).click()
+    await drawer(page)
+      .locator('[data-testid="checklist-item"]')
+      .getByRole("button", { name: "Delete item" })
+      .click()
     await expect(page.getByText("No items yet.")).toBeVisible()
   })
 
@@ -119,7 +126,11 @@ test.describe("TF – checklist", () => {
 
   test("TF6 – cascade delete", async ({ page }) => {
     const project = await createProject("TF Project")
-    const task = await createTask({ project: project.id, title: "TF6 task", dueDate: utcDaysFromNow(0) })
+    const task = await createTask({
+      project: project.id,
+      title: "TF6 task",
+      dueDate: utcDaysFromNow(0),
+    })
     await page.goto("/")
 
     await openTask(page, "TF6 task")
@@ -127,6 +138,10 @@ test.describe("TF – checklist", () => {
     await expect(page.getByText("TF6 doomed item")).toBeVisible()
 
     await page.getByRole("button", { name: "Delete task" }).click()
+    await page
+      .getByTestId("delete-task-confirm")
+      .getByRole("button", { name: "Delete task" })
+      .click()
 
     await expect.poll(async () => (await listChecklist(task.id)).length).toBe(0)
   })

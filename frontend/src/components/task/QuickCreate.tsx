@@ -12,8 +12,15 @@ import { useUI } from "@/components/ui-provider"
 import { useToast } from "@/components/ui/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { STATUSES, type TaskStatus } from "@/types"
 import { cn } from "@/lib/utils"
 
@@ -42,6 +49,7 @@ export default function QuickCreate() {
   const [dueDate, setDueDate] = useState("")
   const [selectedLabels, setSelectedLabels] = useState<string[]>([])
   const [newLabel, setNewLabel] = useState("")
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
 
   useEffect(() => {
     if (quickCreate) {
@@ -56,6 +64,7 @@ export default function QuickCreate() {
       setDueDate("")
       setSelectedLabels([])
       setNewLabel("")
+      setConfirmDiscard(false)
       requestAnimationFrame(() => inputRef.current?.focus())
     }
   }, [quickCreate]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -70,9 +79,7 @@ export default function QuickCreate() {
   const visibleLabels = q ? labels.filter((l) => l.name.toLowerCase().includes(q)) : labels
 
   function toggleLabel(id: string) {
-    setSelectedLabels((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    )
+    setSelectedLabels((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
   async function addLabel() {
@@ -88,23 +95,30 @@ export default function QuickCreate() {
     setNewLabel("")
   }
 
-  function commit() {
+  function hasDraft() {
+    return !!(title.trim() || dueDate || selectedLabels.length > 0 || newLabel.trim())
+  }
+
+  async function commit() {
     const t = title.trim()
-    if (t) {
-      void updateTask
-        .mutateAsync({
-          id: create.taskId,
-          data: { title: t, project: projectId, status, labels: selectedLabels, dueDate },
-        })
-        .then(() => toast("Task created successfully", "success"))
-        .catch(() => {
-          // useUpdateTask already surfaces the error toast on failure.
-        })
-    } else {
+    if (!t) {
       deleteTask.mutate(create.taskId)
+      pendingRef.current = null
+      closeQuickCreate()
+      return
     }
-    pendingRef.current = null
-    closeQuickCreate()
+    try {
+      await updateTask.mutateAsync({
+        id: create.taskId,
+        data: { title: t, project: projectId, status, labels: selectedLabels, dueDate },
+      })
+      pendingRef.current = null
+      toast("Task created successfully", "success")
+      closeQuickCreate()
+    } catch {
+      // Keep the editor open so the draft is not lost; useUpdateTask already
+      // surfaces the error toast.
+    }
   }
 
   function cancel() {
@@ -113,127 +127,163 @@ export default function QuickCreate() {
     closeQuickCreate()
   }
 
+  /** Closes silently when the editor is empty, otherwise asks before throwing
+   *  away what the user typed (backdrop click / Esc / Cancel). */
+  function requestClose() {
+    if (hasDraft()) setConfirmDiscard(true)
+    else cancel()
+  }
+
   return (
-    <div data-testid="quick-create" className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/40" onMouseDown={cancel} />
-      <div className="pointer-events-none absolute inset-0 flex items-start justify-center p-4 pt-[12vh]">
-        <div className="pointer-events-auto w-full max-w-lg rounded-lg border bg-background p-4 shadow-2xl">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              New task
-            </span>
-            <div className="ml-auto flex items-center gap-2">
-              <Select value={projectId} onValueChange={setProjectId}>
-                <SelectTrigger data-testid="qc-project" className="h-8 w-auto gap-2 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-                <SelectTrigger data-testid="qc-status" className="h-8 w-auto gap-2 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUSES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+    <>
+      <div data-testid="quick-create" className="fixed inset-0 z-50">
+        <div
+          data-testid="quick-create-backdrop"
+          className="absolute inset-0 bg-black/40"
+          onClick={requestClose}
+        />
+        <div className="pointer-events-none absolute inset-0 flex items-start justify-center p-4 pt-[12vh]">
+          <div className="pointer-events-auto w-full max-w-lg rounded-lg border bg-background p-4 shadow-2xl">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                New task
+              </span>
+              <div className="ml-auto flex items-center gap-2">
+                <Select value={projectId} onValueChange={setProjectId}>
+                  <SelectTrigger data-testid="qc-project" className="h-8 w-auto gap-2 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+                  <SelectTrigger data-testid="qc-status" className="h-8 w-auto gap-2 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUSES.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
 
-          <Input
-            ref={inputRef}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commit()
-              if (e.key === "Escape") cancel()
-            }}
-            placeholder="What needs to be done?"
-            className="h-10 text-base"
-          />
+            <Input
+              ref={inputRef}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commit()
+                if (e.key === "Escape") requestClose()
+              }}
+              placeholder="What needs to be done?"
+              className="h-10 text-base"
+            />
 
-          <div className="mt-3">
-            <DateTimePicker value={dueDate} onChange={setDueDate} />
-          </div>
-
-          <div className="mt-3">
-            <div className="flex flex-wrap gap-1.5">
-              {visibleLabels.map((l) => {
-                const on = selectedLabels.includes(l.id)
-                return (
-                  <button
-                    key={l.id}
-                    type="button"
-                    onClick={() => toggleLabel(l.id)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors",
-                      on
-                        ? "border-primary bg-primary/10 font-medium"
-                        : "text-muted-foreground hover:bg-accent"
-                    )}
-                  >
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: l.color || "#64748b" }}
-                    />
-                    {l.name}
-                  </button>
-                )
-              })}
-              {labels.length === 0 && (
-                <span className="text-xs text-muted-foreground">No labels yet.</span>
-              )}
-              {labels.length > 0 && visibleLabels.length === 0 && newLabel.trim() && (
-                <span className="text-xs text-muted-foreground">
-                  No matching labels — type and press Enter to add "{newLabel.trim()}"
-                </span>
-              )}
+            <div className="mt-3">
+              <DateTimePicker value={dueDate} onChange={setDueDate} />
             </div>
-            <div className="mt-2 flex items-center gap-2">
-              <Input
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault()
-                    void addLabel()
-                  }
-                }}
-                placeholder="New label name…"
-                className="h-8 flex-1 text-xs"
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => void addLabel()}
-                disabled={!newLabel.trim()}
-              >
-                <Plus className="h-3 w-3" /> Add
-              </Button>
-            </div>
-          </div>
 
-          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              <kbd className="rounded border bg-muted px-1 py-0.5 text-[10px]">Enter</kbd> to save ·{" "}
-              <kbd className="rounded border bg-muted px-1 py-0.5 text-[10px]">Esc</kbd> to cancel
-            </span>
-            <Button size="sm" onClick={commit} disabled={!title.trim()}>
-              Save
-            </Button>
+            <div className="mt-3">
+              <div className="flex flex-wrap gap-1.5">
+                {visibleLabels.map((l) => {
+                  const on = selectedLabels.includes(l.id)
+                  return (
+                    <button
+                      key={l.id}
+                      type="button"
+                      onClick={() => toggleLabel(l.id)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors",
+                        on
+                          ? "border-primary bg-primary/10 font-medium"
+                          : "text-muted-foreground hover:bg-accent"
+                      )}
+                    >
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: l.color || "#64748b" }}
+                      />
+                      {l.name}
+                    </button>
+                  )
+                })}
+                {labels.length === 0 && (
+                  <span className="text-xs text-muted-foreground">No labels yet.</span>
+                )}
+                {labels.length > 0 && visibleLabels.length === 0 && newLabel.trim() && (
+                  <span className="text-xs text-muted-foreground">
+                    No matching labels — type and press Enter to add "{newLabel.trim()}"
+                  </span>
+                )}
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      void addLabel()
+                    }
+                  }}
+                  placeholder="New label name…"
+                  className="h-8 flex-1 text-xs"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void addLabel()}
+                  disabled={!newLabel.trim()}
+                >
+                  <Plus className="h-3 w-3" /> Add
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                <kbd className="rounded border bg-muted px-1 py-0.5 text-[10px]">Enter</kbd> to save
+                · <kbd className="rounded border bg-muted px-1 py-0.5 text-[10px]">Esc</kbd> to
+                cancel
+              </span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={requestClose}>
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={() => void commit()} disabled={!title.trim()}>
+                  Save
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <ConfirmDialog
+        open={confirmDiscard}
+        title="Discard this task?"
+        description="Your new task hasn’t been saved yet. Discard it or keep editing."
+        confirmLabel="Discard task"
+        cancelLabel="Keep editing"
+        testId="quick-create-discard"
+        onConfirm={() => {
+          setConfirmDiscard(false)
+          cancel()
+        }}
+        onCancel={() => {
+          setConfirmDiscard(false)
+          requestAnimationFrame(() => inputRef.current?.focus())
+        }}
+      />
+    </>
   )
 }

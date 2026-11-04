@@ -16,4 +16,14 @@ export default defineConfig({
       "/api": process.env.PB_PROXY_TARGET || "http://localhost:8090",
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "tanstack-vendor": ["@tanstack/react-query", "@tanstack/react-router"],
+          "dnd-vendor": ["@dnd-kit/core", "@dnd-kit/sortable", "@dnd-kit/utilities"],
+        },
+      },
+    },
+  },
 })

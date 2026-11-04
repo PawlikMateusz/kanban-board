@@ -23,7 +23,7 @@ test.describe("TD – task creation (QuickCreate)", () => {
     await expect(page.getByPlaceholder("What needs to be done?")).toBeVisible()
   }
 
-test("TD1 – create task from dashboard", async ({ page }) => {
+  test("TD1 – create task from dashboard", async ({ page }) => {
     const project = await createProject("TD Project")
     await page.goto("/")
 
@@ -89,7 +89,10 @@ test("TD1 – create task from dashboard", async ({ page }) => {
 
     await expect(page.getByPlaceholder("What needs to be done?")).toBeHidden()
     await expect
-      .poll(async () => (await listTasks()).filter((t) => t.project === project.id && !t.title.trim()).length)
+      .poll(
+        async () =>
+          (await listTasks()).filter((t) => t.project === project.id && !t.title.trim()).length
+      )
       .toBe(0)
   })
 
@@ -101,7 +104,10 @@ test("TD1 – create task from dashboard", async ({ page }) => {
     await page.getByPlaceholder("What needs to be done?").press("Enter")
 
     await expect
-      .poll(async () => (await listTasks()).filter((t) => t.project === project.id && !t.title.trim()).length)
+      .poll(
+        async () =>
+          (await listTasks()).filter((t) => t.project === project.id && !t.title.trim()).length
+      )
       .toBe(0)
     expect((await listTasks()).filter((t) => t.project === project.id)).toHaveLength(0)
   })
@@ -188,26 +194,29 @@ test("TD1 – create task from dashboard", async ({ page }) => {
     expect(task?.labels).toEqual([labelB.id])
   })
 
-  test("TD10 – abandoning QuickCreate leaves no orphan task", async ({ page }) => {
+  test("TD10 – N does not replace an open QuickCreate draft", async ({ page }) => {
     const project = await createProject("TD Project")
     await createLabel("TD10 label")
     await page.goto("/")
     await waitForProject(page, "TD Project")
 
-    // First quick-create: empty task created in the DB.
     await page.keyboard.press("n")
-    await expect(page.getByPlaceholder("What needs to be done?")).toBeVisible()
+    const input = page.getByPlaceholder("What needs to be done?")
+    await expect(input).toBeVisible()
+    await input.fill("TD10 draft")
 
-    // Move focus off the input (click a label chip) and open a second
-    // QuickCreate with the N shortcut — the first empty task must be cleaned up.
+    // Move focus off the input, then press N: it must neither open a second
+    // editor nor delete the empty starter task/draft.
     await page.getByRole("button", { name: "TD10 label" }).click()
     await page.keyboard.press("n")
-    await expect(page.getByPlaceholder("What needs to be done?")).toBeVisible()
+    await expect(input).toHaveValue("TD10 draft")
 
-    await page.getByPlaceholder("What needs to be done?").fill("TD10 final")
-    await page.getByPlaceholder("What needs to be done?").press("Enter")
+    await input.fill("TD10 final")
+    await input.press("Enter")
 
-    await expect.poll(async () => (await listTasks()).filter((t) => t.project === project.id).length).toBe(1)
+    await expect
+      .poll(async () => (await listTasks()).filter((t) => t.project === project.id).length)
+      .toBe(1)
     const tasks = (await listTasks()).filter((t) => t.project === project.id)
     expect(tasks[0]?.title).toBe("TD10 final")
     expect(tasks.filter((t) => !t.title.trim()).length).toBe(0)
@@ -224,9 +233,7 @@ test("TD1 – create task from dashboard", async ({ page }) => {
     // Pick a due date two days from now through the date-time picker.
     await page.locator('[data-testid="due-date-trigger"]').click()
     const now = new Date()
-    const target = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 2)
-    )
+    const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 2))
     const diff =
       (target.getUTCFullYear() - now.getUTCFullYear()) * 12 +
       (target.getUTCMonth() - now.getUTCMonth())
@@ -252,5 +259,29 @@ test("TD1 – create task from dashboard", async ({ page }) => {
     await expect(
       dashboardSection(page, "next3").getByRole("button", { name: "TD11 with due date" })
     ).toBeVisible()
+  })
+
+  test("TD12 – clicking outside with a draft asks before discarding", async ({ page }) => {
+    await createProject("TD Project")
+    await page.goto("/")
+
+    await openCreate(page, "TD Project")
+    const input = page.getByPlaceholder("What needs to be done?")
+    await input.fill("TD12 draft")
+
+    const backdrop = page.locator('[data-testid="quick-create-backdrop"]')
+    await backdrop.click({ position: { x: 5, y: 5 } })
+    await expect(page.getByText("Discard this task?")).toBeVisible()
+
+    // Keeping the editor open preserves the draft and restores focus.
+    await page.getByRole("button", { name: "Keep editing" }).click()
+    await expect(input).toHaveValue("TD12 draft")
+    await expect(input).toBeFocused()
+
+    // Discarding deletes the empty starter task and closes the editor.
+    await backdrop.click({ position: { x: 5, y: 5 } })
+    await page.getByRole("button", { name: "Discard task" }).click()
+    await expect(input).toBeHidden()
+    await expect.poll(async () => (await listTasks()).filter((t) => !t.title.trim()).length).toBe(0)
   })
 })

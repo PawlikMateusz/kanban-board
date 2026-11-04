@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Plus, Trash2 } from "lucide-react"
+import { Moon, Plus, Sun, Trash2 } from "lucide-react"
 import {
   ORDER_GAP,
   useCreateLabel,
@@ -12,9 +12,10 @@ import {
   useUpdateProject,
 } from "@/api/kanban"
 import ColorPicker from "@/components/ColorPicker"
+import { useUI } from "@/components/ui-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 function ConfirmDeleteDialog({
   open,
@@ -30,22 +31,14 @@ function ConfirmDeleteDialog({
   onClose: () => void
 }) {
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <p className="text-sm text-muted-foreground">{message}</p>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="destructive" onClick={onConfirm}>
-            Delete
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      title={title}
+      description={message}
+      confirmLabel="Delete"
+      onConfirm={onConfirm}
+      onCancel={onClose}
+    />
   )
 }
 
@@ -209,14 +202,43 @@ function LabelManager() {
   )
 }
 
+function AppearanceSection() {
+  const { theme, setTheme } = useUI()
+  return (
+    <section className="md:col-span-2">
+      <h2 className="mb-2 text-sm font-semibold">Appearance</h2>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Choose how the board looks. Your choice is saved and synced across devices.
+      </p>
+      <div className="flex gap-2">
+        <Button
+          variant={theme === "light" ? "default" : "outline"}
+          onClick={() => setTheme("light")}
+          data-testid="theme-light"
+        >
+          <Sun className="h-4 w-4" /> Light
+        </Button>
+        <Button
+          variant={theme === "dark" ? "default" : "outline"}
+          onClick={() => setTheme("dark")}
+          data-testid="theme-dark"
+        >
+          <Moon className="h-4 w-4" /> Dark
+        </Button>
+      </div>
+    </section>
+  )
+}
+
 export default function SettingsPage() {
   return (
     <div className="flex-1 overflow-y-auto">
       <header className="border-b bg-background px-4 py-3">
         <h1 className="text-base font-semibold">Settings</h1>
-        <p className="text-xs text-muted-foreground">Manage projects and labels.</p>
+        <p className="text-xs text-muted-foreground">Manage appearance, projects and labels.</p>
       </header>
       <div className="mx-auto grid max-w-4xl gap-8 px-4 py-5 md:grid-cols-2">
+        <AppearanceSection />
         <ProjectManager />
         <LabelManager />
       </div>

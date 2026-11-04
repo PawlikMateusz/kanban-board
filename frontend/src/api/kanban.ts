@@ -2,16 +2,29 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { pb } from "@/lib/pb"
 import { uid } from "@/lib/utils"
 import { useToast } from "@/components/ui/toast"
-import type { ChecklistItem, Comment, Label, Project, Task, TaskStatus } from "@/types"
+import type {
+  AppSettings,
+  ChecklistItem,
+  Comment,
+  Label,
+  Project,
+  Task,
+  TaskStatus,
+  Theme,
+} from "@/types"
 
 export const queryKeys = {
   projects: ["projects"] as const,
   labels: ["labels"] as const,
   tasks: ["tasks"] as const,
+  settings: ["settings"] as const,
   comments: (taskId: string) => ["comments", taskId] as const,
   checklist: (taskId: string) => ["checklist", taskId] as const,
   search: (q: string) => ["search", q] as const,
 }
+
+/** Fixed id of the singleton app-settings record created by the migration. */
+export const SETTINGS_ID = "appsettings0000"
 
 // Gap-based ordering: new tasks get (max + GAP), moves average the neighbours.
 // Only renormalise a column when the gap collapses below 1.
@@ -47,6 +60,39 @@ export function useLabels() {
   return useQuery({
     queryKey: queryKeys.labels,
     queryFn: () => pb.collection("labels").getFullList<Label>({ sort: "created" }),
+  })
+}
+
+/**
+ * App-wide preferences stored server-side so the theme follows the user across
+ * devices. The migration seeds the singleton record; `retry: false` keeps the
+ * app usable if the collection is unavailable (e.g. an older backend).
+ */
+export function useSettings() {
+  return useQuery({
+    queryKey: queryKeys.settings,
+    queryFn: () => pb.collection("settings").getOne<AppSettings>(SETTINGS_ID),
+    staleTime: Infinity,
+    retry: false,
+  })
+}
+
+export function useUpdateSettings() {
+  const qc = useQueryClient()
+  const { toast } = useToast()
+  return useMutation({
+    mutationFn: (data: { theme: Theme }) =>
+      pb.collection("settings").update<AppSettings>(SETTINGS_ID, data),
+    onMutate: async (data) => {
+      await qc.cancelQueries({ queryKey: queryKeys.settings })
+      const prev = qc.getQueryData<AppSettings>(queryKeys.settings)
+      if (prev) qc.setQueryData(queryKeys.settings, { ...prev, ...data })
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      toast("Failed to save theme")
+      if (ctx?.prev) qc.setQueryData(queryKeys.settings, ctx.prev)
+    },
   })
 }
 
