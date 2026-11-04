@@ -71,3 +71,12 @@ export type ChecklistItem = {
   created: string
   updated: string
 }
+
+export type Theme = "light" | "dark"
+
+export type AppSettings = {
+  id: string
+  theme: Theme
+  created: string
+  updated: string
+}

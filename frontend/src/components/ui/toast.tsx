@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useState,
-  type ReactNode,
-} from "react"
+import { createContext, useCallback, useContext, useState, type ReactNode } from "react"
 import { AlertCircle, CheckCircle2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -49,7 +43,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             role="alert"
             className={cn(
               "pointer-events-auto flex items-start gap-2 rounded-md border bg-card px-3 py-2.5 text-sm shadow-lg",
-              t.kind === "error" ? "border-red-300 text-red-700" : "border-emerald-300 text-emerald-700"
+              t.kind === "error"
+                ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/50 dark:text-emerald-300"
             )}
           >
             {t.kind === "error" ? (

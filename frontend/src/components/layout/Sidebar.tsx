@@ -1,12 +1,6 @@
 import { useState } from "react"
 import { Link, useRouterState } from "@tanstack/react-router"
-import {
-  DndContext,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core"
+import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core"
 import {
   SortableContext,
   arrayMove,
@@ -18,6 +12,7 @@ import { ChevronRight, GripVertical, LayoutDashboard, Settings } from "lucide-re
 import type { ReactNode } from "react"
 import { ORDER_GAP, useLabels, useProjects, useReorderProjects } from "@/api/kanban"
 import SearchBar from "@/components/layout/SearchBar"
+import ThemeToggle from "@/components/layout/ThemeToggle"
 import { cn } from "@/lib/utils"
 import type { Project } from "@/types"
 
@@ -124,9 +119,7 @@ function LabelsNav() {
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-1 px-2 py-1 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
       >
-        <ChevronRight
-          className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-90")}
-        />
+        <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-90")} />
         Labels
       </button>
       {open && (
@@ -157,6 +150,7 @@ export default function Sidebar() {
           K
         </div>
         <span className="text-lg font-semibold tracking-tight">Kanban</span>
+        <ThemeToggle className="ml-auto h-8 w-8" />
       </div>
 
       <div className="px-3">

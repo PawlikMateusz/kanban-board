@@ -1,9 +1,19 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kanban</title>
+    <script>
+      // Apply the saved theme before the app renders to avoid a flash.
+      try {
+        if (localStorage.getItem("kanban-theme") === "dark") {
+          document.documentElement.classList.add("dark")
+        }
+      } catch (e) {
+        // Storage may be unavailable (private mode); fall back to light.
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

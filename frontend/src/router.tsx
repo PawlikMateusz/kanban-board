@@ -1,9 +1,10 @@
-import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router"
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  lazyRouteComponent,
+} from "@tanstack/react-router"
 import RootLayout from "./components/layout/RootLayout"
-import DashboardPage from "./pages/DashboardPage"
-import ProjectPage from "./pages/ProjectPage"
-import SettingsPage from "./pages/SettingsPage"
-import LabelsPage from "./pages/LabelsPage"
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -12,25 +13,25 @@ const rootRoute = createRootRoute({
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: DashboardPage,
+  component: lazyRouteComponent(() => import("./pages/DashboardPage")),
 })
 
 const projectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/projects/$projectId",
-  component: ProjectPage,
+  component: lazyRouteComponent(() => import("./pages/ProjectPage")),
 })
 
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/settings",
-  component: SettingsPage,
+  component: lazyRouteComponent(() => import("./pages/SettingsPage")),
 })
 
 const labelsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/labels/$labelId",
-  component: LabelsPage,
+  component: lazyRouteComponent(() => import("./pages/LabelsPage")),
 })
 
 const routeTree = rootRoute.addChildren([dashboardRoute, projectRoute, settingsRoute, labelsRoute])

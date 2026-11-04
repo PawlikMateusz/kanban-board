@@ -22,6 +22,7 @@ I tried a lot of self-hosted kanban boards but never quite liked any of them, so
 - Cards with checklists, labels, comments and attachments
 - Dashboard with a timeline and mini calendar
 - Quick-create, global search and keyboard shortcuts
+- Light & dark themes (choice synced across devices)
 - Responsive mobile UI
 - Optional CalDAV (Radicale) sync: push a due-dated task to your iPhone as a Reminder
 

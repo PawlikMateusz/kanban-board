@@ -125,12 +125,20 @@ test.describe("TE – task details drawer", () => {
 
   test("TE6 – delete task", async ({ page }) => {
     const project = await createProject("TE Project")
-    const task = await createTask({ project: project.id, title: "TE6 delete", dueDate: utcDaysFromNow(0) })
+    const task = await createTask({
+      project: project.id,
+      title: "TE6 delete",
+      dueDate: utcDaysFromNow(0),
+    })
 
     await page.goto("/")
     await expandDashboardSection(page, "today")
     await page.getByRole("button", { name: "TE6 delete" }).click()
     await page.getByRole("button", { name: "Delete task" }).click()
+    await page
+      .getByTestId("delete-task-confirm")
+      .getByRole("button", { name: "Delete task" })
+      .click()
 
     await expect(page.getByPlaceholder("Task title")).toBeHidden()
     await expect(page.getByRole("button", { name: "TE6 delete" })).toHaveCount(0)

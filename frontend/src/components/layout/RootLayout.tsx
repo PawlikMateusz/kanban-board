@@ -5,6 +5,7 @@ import { UIProvider } from "@/components/ui-provider"
 import { ToastProvider } from "@/components/ui/toast"
 import Sidebar from "@/components/layout/Sidebar"
 import SearchBar from "@/components/layout/SearchBar"
+import ThemeToggle from "@/components/layout/ThemeToggle"
 import GlobalShortcuts from "@/components/layout/GlobalShortcuts"
 import TaskDrawer from "@/components/task/TaskDrawer"
 import QuickCreate from "@/components/task/QuickCreate"
@@ -26,6 +27,7 @@ function MobileHeader() {
         <Link to="/settings" className="p-1.5 text-muted-foreground" aria-label="Settings">
           <Settings className="h-5 w-5" />
         </Link>
+        <ThemeToggle className="h-8 w-8" />
       </div>
       {projects.length > 0 && (
         <div className="flex gap-1.5 overflow-x-auto pb-0.5">
@@ -36,7 +38,10 @@ function MobileHeader() {
               params={{ projectId: p.id }}
               className="flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground"
             >
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color || "#64748b" }} />
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: p.color || "#64748b" }}
+              />
               {p.name}
             </Link>
           ))}

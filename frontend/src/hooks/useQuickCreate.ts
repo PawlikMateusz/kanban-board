@@ -16,18 +16,23 @@ export function useQuickCreate() {
 
   return useCallback(
     async (projectId: string | null, status: TaskStatus) => {
-      const pid = projectId ?? projects.find((p) => p.id === "inbox0000000000")?.id ?? projects[0]?.id
+      const pid =
+        projectId ?? projects.find((p) => p.id === "inbox0000000000")?.id ?? projects[0]?.id
       if (!pid) return
-      const created = await createTask.mutateAsync({
-        project: pid,
-        title: "",
-        description: "",
-        status,
-        dueDate: "",
-        labels: [],
-        order: nextOrder(tasks, pid, status),
-      })
-      openQuickCreate(created.id, pid, status)
+      try {
+        const created = await createTask.mutateAsync({
+          project: pid,
+          title: "",
+          description: "",
+          status,
+          dueDate: "",
+          labels: [],
+          order: nextOrder(tasks, pid, status),
+        })
+        openQuickCreate(created.id, pid, status)
+      } catch {
+        // useCreateTask already shows the error toast.
+      }
     },
     [tasks, projects, createTask, openQuickCreate]
   )
